@@ -1,5 +1,5 @@
 #!name=防开屏
-#!desc=15 款 iOS App 的开屏广告过滤｜修订 2
+#!desc=15 款 iOS App 的开屏广告过滤｜修订 3
 
 [Rule]
 # QQ 音乐：广告投放与素材主机，指定主机的 QUIC 连接回退到 TCP
@@ -26,7 +26,7 @@ DOMAIN,iadmusicmatvideo.music.126.net,REJECT
 [URL Rewrite]
 # QQ 音乐：广告下发和素材路径
 # 来源 https://github.com/Moli-X/Resources/blob/main/Rewrite/ADBlock.conf
-^https?://music\.y\.qq\.com/maproxy/getPbCompressAd(?:[/?]|$) - reject
+^https?://music\.y\.qq\.com/maproxy/getPbCompressAd(?:[/?]|$) - reject-200
 ^https?://y\.gtimg\.cn/music/common/upload/t_splash_info/ - reject-img
 ^https?://y\.gtimg\.cn/music/common/upload/(?:kg_ad|targeted_ads) - reject-img
 
