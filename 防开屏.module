@@ -1,5 +1,5 @@
 #!name=防开屏
-#!desc=15 款 iOS App 的开屏广告过滤｜修订 3
+#!desc=15 款 iOS App 的开屏广告过滤｜修订 4
 
 [Rule]
 # QQ 音乐：广告投放与素材主机，指定主机的 QUIC 连接回退到 TCP
@@ -16,6 +16,13 @@ DOMAIN,et.tanx.com,REJECT
 
 # 汽水音乐：恢复此前实测通过的 V1.3 广告投放与素材规则
 DOMAIN,ads5-normal-hl.zijieapi.com,REJECT
+# 汽水音乐：实机抓包发现的疑似第三方广告投放主机（待验证）
+DOMAIN,ssp.iytcdn.com,REJECT
+DOMAIN,missile.iytcdn.com,REJECT
+DOMAIN,mantis.bayescom.com,REJECT
+DOMAIN,tencent-ssp.66mobi.com,REJECT
+DOMAIN,evt.bidex.cn,REJECT
+DOMAIN,vt.bidex.cn,REJECT
 DOMAIN,adsmind.ugdtimg.com,REJECT
 
 # 网易云音乐：拦截广告图片和视频素材主机，保留广告权益 API
