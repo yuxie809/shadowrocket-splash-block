@@ -1,0 +1,74 @@
+#!name=防开屏
+#!desc=15 款 iOS App 的开屏广告过滤，效果待实机验证
+
+[Rule]
+# 网易云音乐：拦截广告图片和视频素材主机，保留广告权益 API
+# 来源 https://github.com/zbsdsb/loon-adblock-plugins/blob/main/NeteaseCloudMusic_splash_patch.lpx
+DOMAIN,iadmusicmat.music.126.net,REJECT
+DOMAIN,iadmusicmatvideo.music.126.net,REJECT
+
+[URL Rewrite]
+# QQ 音乐：开屏图片素材目录
+# 来源 https://github.com/Moli-X/Resources/blob/main/Rewrite/ADBlock.conf
+^https?://y\.gtimg\.cn/music/common/upload/t_splash_info/ - reject
+
+# 汽水音乐：公开规则中的通用广告接口，是否供开屏使用待实测
+# 来源 https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/QiShuiMusicAds.conf
+^https://(?:api\.qishui\.com|beta-luna\.douyin\.com)/luna/ads(?:/)?(?:\?|$) - reject-200
+
+# 百度贴吧：开屏广告下发
+# 来源 https://github.com/app2smile/rules/blob/master/module/tieba.sgmodule
+^https?://(?:tiebac|c\.tieba)\.baidu\.com/c/f/ad/getSplashAd(?:\?|$) - reject
+
+# 微博：开屏预加载和实时广告
+# 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
+^https?://bootpreload\.uve\.weibo\.com/v\d+/ad/preload(?:\?|$) - reject-dict
+^https?://bootrealtime\.uve\.weibo\.com/v\d+/ad/realtime(?:\?|$) - reject-dict
+
+# 高德地图：启动广告和开屏实时投放
+# 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
+^https?://m5\.amap\.com/ws/shield/dsp/app/startup/init(?:\?|$) - reject-dict
+^https?://amap-aos-info-nogw\.amap\.com/ws/aos/alimama/splash_screen_rt(?:\?|$) - reject
+
+# 百度地图：仅匹配 phpui2 接口的 qt=ads 请求
+# 来源 https://github.com/BlueGrave/Shadowrocket/blob/master/sRocket.conf
+^https?://newclient\.map\.baidu\.com/client/phpui2/?\?(?:[^#]*&)?qt=ads(?:&|$) - reject-dict
+
+# 闲鱼：冷启动广告和素材预取，含旧版淘宝网关
+# 来源 https://github.com/Thelongdarkorg/loon-plugins/blob/main/xianyu_splash_ad_block.plugin
+^https?://acs\.m\.goofish\.com/gw/mtop\.taobao\.idlecommerce\.splash\.(?:async\.)?ads(?:/|\?|$) - reject-200
+^https?://acs\.m\.taobao\.com/gw/mtop\.taobao\.idlecommerce\.splash\.ads(?:/|\?|$) - reject-200
+
+# 拼多多：开屏广告下发
+# 来源 https://github.com/BlueGrave/Shadowrocket/blob/master/sRocket.conf
+^https?://api\.(?:pinduoduo|yangkeduo)\.com/api/cappuccino/splash(?:\?|$) - reject
+
+[Body Rewrite]
+# 酷安：仅移除初始化响应中的开屏设置，保留首页配置卡片
+# 来源 https://raw.githubusercontent.com/ddgksf2013/Scripts/master/coolapk.js
+# 初始化响应样例 https://github.com/Coolapk-UWP/Coolapk-API-Collect/blob/main/Coolapk-API/%E4%B8%BB%E9%A1%B5/Tab%20%E5%86%85%E5%AE%B9.md
+http-response-jq ^https?://api\.coolapk\.com/v6/main/init(?:\?|$) 'def clear: del(."SplashAd.Type", ."SplashAd.Expires", ."SplashAd.onResume"); if type == "object" and (.data | type) == "array" then .data |= map(if type == "object" then (if (.extraDataArr | type) == "object" then .extraDataArr |= clear else . end) | (if (.extraData | type) == "string" and (.extraData | contains("SplashAd.")) then .extraData |= (. as $original | try (fromjson | clear | tojson) catch $original) else . end) else . end) else . end'
+
+# 哔哩哔哩：清空开屏展示列表，保留响应状态
+# 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
+http-response-jq ^https?://app\.bilibili\.com/x/v2/splash/(?:list|show|event/list2)(?:\?|$) 'if type == "object" and (.data | type) == "object" then .data |= (reduce ("show", "event_list", "list") as $key (. ; if (.[$key] | type) == "array" then .[$key] = [] else . end)) else . end'
+
+# 知乎：将开屏时长归零，兼容响应内嵌的 JSON 字符串
+# 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
+http-response-jq ^https?://api\.zhihu\.com/commercial_api/(?:launch_v2|real_time_launch_v2)(?:\?|$) 'def clear: if type == "array" then map(clear) elif type == "object" then map_values(clear) | (if (.img_play_duration | type) == "number" then .img_play_duration = 0 else . end) | (if (.launch_timeout | type) == "number" then .launch_timeout = 0 else . end) elif type == "string" and (contains("img_play_duration") or contains("launch_timeout")) then . as $original | try (fromjson | clear | tojson) catch $original else . end; clear'
+
+# 小红书：从开屏配置和通用配置中移除开屏字段
+# 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
+http-response-jq ^https?://edith\.(?:xiaohongshu|rnote)\.com/api/sns/v\d+/system_service/(?:splash_config|config)(?:\?|$) 'if type == "object" and (.data | type) == "object" then .data |= (del(.splash, .loading_img) | if (.ads_groups | type) == "array" then .ads_groups = [] else . end) else . end'
+
+# 京东：仅处理 URL 带 functionId=start 的明文开屏响应
+# 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
+# 新版 POST 编码协议尚未覆盖 https://github.com/zbsdsb/loon-adblock-plugins
+http-response-jq ^https?://api\.m\.jd\.com/client\.action\?(?:[^#]*&)?functionId=start(?:&|$) 'if type == "object" then with_entries(if .key == "images" and (.value | type) == "array" then .value = [] elif .key == "showTimesDaily" and (.value | type) == "number" then .value = 0 else . end) else . end'
+
+# 淘宝：清空指定开屏位素材，也覆盖闲鱼共用的这个接口
+# 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
+http-response-jq ^https?://guide-acs\.m\.taobao\.com/gw/mtop\.taobao\.wireless\.home\.splash\.awesome\.get(?:/|\?|$) 'walk(if type == "object" and (."taobao-splash" | type) == "object" and (."taobao-splash".data | type) == "array" then ."taobao-splash".data = [] else . end)'
+
+[MITM]
+hostname = %APPEND% y.gtimg.cn, api.qishui.com, beta-luna.douyin.com, tiebac.baidu.com, c.tieba.baidu.com, bootpreload.uve.weibo.com, bootrealtime.uve.weibo.com, m5.amap.com, amap-aos-info-nogw.amap.com, newclient.map.baidu.com, acs.m.goofish.com, acs.m.taobao.com, api.pinduoduo.com, api.yangkeduo.com, api.coolapk.com, app.bilibili.com, api.zhihu.com, edith.xiaohongshu.com, edith.rnote.com, api.m.jd.com, guide-acs.m.taobao.com
