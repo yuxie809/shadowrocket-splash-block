@@ -1,20 +1,40 @@
 #!name=防开屏
-#!desc=15 款 iOS App 的开屏广告过滤，效果待实机验证
+#!desc=15 款 iOS App 的开屏广告过滤｜修订 2
 
 [Rule]
+# QQ 音乐：广告投放与素材主机，指定主机的 QUIC 连接回退到 TCP
+DOMAIN,tmead.y.qq.com,REJECT
+DOMAIN,tmeadquic.y.qq.com,REJECT
+DOMAIN,adcdn6.tencentmusic.com,REJECT
+AND,((PROTOCOL,QUIC),(DOMAIN,music.y.qq.com)),REJECT
+AND,((PROTOCOL,QUIC),(DOMAIN,y.gtimg.cn)),REJECT
+
+# 酷安：恢复此前实测通过的 V1.3 广告域名规则
+DOMAIN,pgdt.ugdtimg.com,REJECT
+DOMAIN,sdk-config.tanx.com,REJECT
+DOMAIN,et.tanx.com,REJECT
+
+# 汽水音乐：恢复此前实测通过的 V1.3 广告投放与素材规则
+DOMAIN,ads5-normal-hl.zijieapi.com,REJECT
+DOMAIN,adsmind.ugdtimg.com,REJECT
+
 # 网易云音乐：拦截广告图片和视频素材主机，保留广告权益 API
 # 来源 https://github.com/zbsdsb/loon-adblock-plugins/blob/main/NeteaseCloudMusic_splash_patch.lpx
 DOMAIN,iadmusicmat.music.126.net,REJECT
 DOMAIN,iadmusicmatvideo.music.126.net,REJECT
 
 [URL Rewrite]
-# QQ 音乐：开屏图片素材目录
+# QQ 音乐：广告下发和素材路径
 # 来源 https://github.com/Moli-X/Resources/blob/main/Rewrite/ADBlock.conf
-^https?://y\.gtimg\.cn/music/common/upload/t_splash_info/ - reject
+^https?://music\.y\.qq\.com/maproxy/getPbCompressAd(?:[/?]|$) - reject
+^https?://y\.gtimg\.cn/music/common/upload/t_splash_info/ - reject-img
+^https?://y\.gtimg\.cn/music/common/upload/(?:kg_ad|targeted_ads) - reject-img
 
-# 汽水音乐：公开规则中的通用广告接口，是否供开屏使用待实测
-# 来源 https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/QiShuiMusicAds.conf
-^https://(?:api\.qishui\.com|beta-luna\.douyin\.com)/luna/ads(?:/)?(?:\?|$) - reject-200
+# 网易云音乐：V1.3 的开屏配置、预取和活动素材接口
+^https?://interface3\.music\.163\.com/eapi/ad/(?:loading/current|prefetch/select|iyunIds)(?:[/?#]|$) - reject-dict
+
+# 哔哩哔哩：V1.3 的开屏视频文件名
+^https?://upos-sz-static\.bilivideo\.com/ssaxcode/[^?#]*-SPLASH\.mp4(?:[?#]|$) - reject
 
 # 百度贴吧：开屏广告下发
 # 来源 https://github.com/app2smile/rules/blob/master/module/tieba.sgmodule
@@ -44,10 +64,8 @@ DOMAIN,iadmusicmatvideo.music.126.net,REJECT
 ^https?://api\.(?:pinduoduo|yangkeduo)\.com/api/cappuccino/splash(?:\?|$) - reject
 
 [Body Rewrite]
-# 酷安：仅移除初始化响应中的开屏设置，保留首页配置卡片
-# 来源 https://raw.githubusercontent.com/ddgksf2013/Scripts/master/coolapk.js
-# 初始化响应样例 https://github.com/Coolapk-UWP/Coolapk-API-Collect/blob/main/Coolapk-API/%E4%B8%BB%E9%A1%B5/Tab%20%E5%86%85%E5%AE%B9.md
-http-response-jq ^https?://api\.coolapk\.com/v6/main/init(?:\?|$) 'def clear: del(."SplashAd.Type", ."SplashAd.Expires", ."SplashAd.onResume"); if type == "object" and (.data | type) == "array" then .data |= map(if type == "object" then (if (.extraDataArr | type) == "object" then .extraDataArr |= clear else . end) | (if (.extraData | type) == "string" and (.extraData | contains("SplashAd.")) then .extraData |= (. as $original | try (fromjson | clear | tojson) catch $original) else . end) else . end) else . end'
+# 酷安：沿用实测版本，仅过滤初始化响应中的 945 卡片
+http-response-jq ^https?://api\.coolapk\.com/v6/main/init(?:[/?]|$) 'if (.data | type) == "array" then .data |= map(select((.entityId | tostring) != "945")) else . end'
 
 # 哔哩哔哩：清空开屏展示列表，保留响应状态
 # 来源 https://github.com/osuphi/shadowrocket-startup-ads/blob/main/StartupAds.module
@@ -71,4 +89,5 @@ http-response-jq ^https?://api\.m\.jd\.com/client\.action\?(?:[^#]*&)?functionId
 http-response-jq ^https?://guide-acs\.m\.taobao\.com/gw/mtop\.taobao\.wireless\.home\.splash\.awesome\.get(?:/|\?|$) 'walk(if type == "object" and (."taobao-splash" | type) == "object" and (."taobao-splash".data | type) == "array" then ."taobao-splash".data = [] else . end)'
 
 [MITM]
-hostname = %APPEND% y.gtimg.cn, api.qishui.com, beta-luna.douyin.com, tiebac.baidu.com, c.tieba.baidu.com, bootpreload.uve.weibo.com, bootrealtime.uve.weibo.com, m5.amap.com, amap-aos-info-nogw.amap.com, newclient.map.baidu.com, acs.m.goofish.com, acs.m.taobao.com, api.pinduoduo.com, api.yangkeduo.com, api.coolapk.com, app.bilibili.com, api.zhihu.com, edith.xiaohongshu.com, edith.rnote.com, api.m.jd.com, guide-acs.m.taobao.com
+# HTTPS 重写使用当前配置的 HTTPS 解密设置
+hostname = %APPEND% y.gtimg.cn, music.y.qq.com, interface3.music.163.com, upos-sz-static.bilivideo.com, tiebac.baidu.com, c.tieba.baidu.com, bootpreload.uve.weibo.com, bootrealtime.uve.weibo.com, m5.amap.com, amap-aos-info-nogw.amap.com, newclient.map.baidu.com, acs.m.goofish.com, acs.m.taobao.com, api.pinduoduo.com, api.yangkeduo.com, api.coolapk.com, app.bilibili.com, api.zhihu.com, edith.xiaohongshu.com, edith.rnote.com, api.m.jd.com, guide-acs.m.taobao.com
